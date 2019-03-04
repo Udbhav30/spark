@@ -30,7 +30,8 @@ ARG k8s_tests=kubernetes/tests
 
 RUN set -ex && \
     apk upgrade --no-cache && \
-    apk add --no-cache bash tini libc6-compat linux-pam nss && \
+    ln -s /lib /lib64 && \
+    apk add --no-cache bash tini libc6-compat linux-pam krb5 krb5-libs && \
     mkdir -p /opt/spark && \
     mkdir -p /opt/spark/work-dir && \
     touch /opt/spark/RELEASE && \
@@ -48,7 +49,6 @@ COPY ${k8s_tests} /opt/spark/tests
 COPY data /opt/spark/data
 
 ENV SPARK_HOME /opt/spark
-ENV LD_LIBRARY_PATH /lib64/
 
 WORKDIR /opt/spark/work-dir
 
