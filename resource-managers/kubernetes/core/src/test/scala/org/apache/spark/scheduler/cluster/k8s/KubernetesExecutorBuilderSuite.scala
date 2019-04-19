@@ -151,8 +151,7 @@ class KubernetesExecutorBuilderSuite extends SparkFunSuite {
       Map.empty,
       Map.empty,
       Nil,
-      Seq.empty[String],
-      Option.empty)
+      Seq.empty[String])
     val sparkPod = KubernetesExecutorBuilder
       .apply(kubernetesClient, sparkConf)
       .buildFromFeatures(kubernetesConf)
