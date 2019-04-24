@@ -68,9 +68,13 @@ private[spark] class KubernetesDriverBuilder(
     val baseFeatures = Seq(
       provideBasicStep(kubernetesConf),
       provideCredentialsStep(kubernetesConf),
-      provideServiceStep(kubernetesConf),
-      provideLocalDirsStep(kubernetesConf))
+      provideServiceStep(kubernetesConf))
 
+
+    val LocalDirFeature = if (kubernetesConf.sparkConf.getBoolean
+    ("spark.kubernetes.driver.emptyDir.enable", true)) {
+      Seq(provideLocalDirsStep(kubernetesConf))
+    } else Nil
     val secretFeature = if (kubernetesConf.roleSecretNamesToMountPaths.nonEmpty) {
       Seq(provideSecretsStep(kubernetesConf))
     } else Nil
@@ -96,7 +100,7 @@ private[spark] class KubernetesDriverBuilder(
 
     val allFeatures = (baseFeatures :+ bindingsStep) ++
         secretFeature ++ envSecretFeature ++ volumesFeature ++
-        podTemplateFeature
+        podTemplateFeature ++ LocalDirFeature
 
     var spec = KubernetesDriverSpec(
       provideInitialPod(),
