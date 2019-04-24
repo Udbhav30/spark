@@ -16,9 +16,12 @@
  */
 package org.apache.spark.scheduler.cluster.k8s
 
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
-import io.fabric8.kubernetes.api.model.PodBuilder
+import com.google.common.util.concurrent.Uninterruptibles
+import io.fabric8.kubernetes.api.model.{Pod, PodBuilder}
 import io.fabric8.kubernetes.client.KubernetesClient
 import scala.collection.mutable
 
@@ -51,13 +54,37 @@ private[spark] class ExecutorPodsAllocator(
   private val kubernetesDriverPodName = conf
     .get(KUBERNETES_DRIVER_POD_NAME)
 
-  private val driverPod = kubernetesDriverPodName
-    .map(name => Option(kubernetesClient.pods()
-      .withName(name)
-      .get())
-      .getOrElse(throw new SparkException(
-        s"No pod was found named $kubernetesDriverPodName in the cluster in the " +
-          s"namespace $namespace (this was supposed to be the driver pod.).")))
+  private val driverPod = getDriverPod(
+    conf.getInt("spark.kubernetes.allocation.fetchDriverPod.maxRetries", 3),
+    conf.getTimeAsMs("spark.kubernetes.allocation.fetchDriverPod.retryWaitTime", "5s"))
+
+  private def getDriverPod(
+                            maxRetries: Int = 3,
+                            retryWaitTime: Long = 5000,
+                            retryCount: Int = 0): Option[Pod] = {
+    def shouldRetry(e: Throwable, retryCount: Int): Boolean = {
+      val isIOException = e.isInstanceOf[IOException] ||
+        (e.getCause != null && e.getCause.isInstanceOf[IOException])
+      val hasRemainingRetries = retryCount < maxRetries
+      isIOException && hasRemainingRetries
+    }
+
+    try {
+      kubernetesDriverPodName
+        .map(name => Option(kubernetesClient.pods()
+          .withName(name)
+          .get())
+          .getOrElse(throw new SparkException(
+            s"No pod was found named $kubernetesDriverPodName in the cluster in the " +
+              s"namespace $namespace (this was supposed to be the driver pod.).")))
+    } catch {
+      case e: Throwable if shouldRetry(e, retryCount) =>
+        logWarning(
+          s"Retrying fetch ($retryCount/$maxRetries) for driver Pod after $retryWaitTime ms.")
+        Uninterruptibles.sleepUninterruptibly(retryWaitTime, TimeUnit.MILLISECONDS)
+        getDriverPod(maxRetries, retryWaitTime, retryCount + 1)
+    }
+  }
 
   // Executor IDs that have been requested from Kubernetes but have not been detected in any
   // snapshot yet. Mapped to the timestamp when they were created.
