@@ -30,8 +30,8 @@ object Createtable {
       .appName("Sampleud")
       .getOrCreate()
 
-        spark.sql("create database if not exists tpch_parquet_1tb")
-        spark.sql("use tpch_parquet_1tb")
+        spark.sql("create database if not exists tpchq_parquet_1tb")
+        spark.sql("use tpchq_parquet_1tb")
     time(spark.sql("create table lineitem STORED AS PARQUET AS (SELECT * FROM" +
       " tpch_external_1tb.lineitem)"))
 

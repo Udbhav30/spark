@@ -65,6 +65,7 @@ private[k8s] class LoggingPodStatusWatcherImpl(
 
   override def eventReceived(action: Action, pod: Pod): Unit = {
     this.pod = Option(pod)
+    logInfo(s"action $action")
     action match {
       case Action.DELETED | Action.ERROR =>
         closeWatch()
@@ -78,7 +79,7 @@ private[k8s] class LoggingPodStatusWatcherImpl(
   }
 
   override def onClose(e: KubernetesClientException): Unit = {
-    logDebug(s"Stopping watching application $appId with last-observed phase $phase")
+    logInfo(s"Stopping watching application $appId with last-observed phase $phase, exception $e")
     closeWatch()
   }
 

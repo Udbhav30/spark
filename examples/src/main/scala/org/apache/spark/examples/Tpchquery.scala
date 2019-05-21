@@ -30,7 +30,7 @@ object Tpchquery {
       .enableHiveSupport()
       .getOrCreate()
 
-    spark.sql("use tpch_external_1tb;")
+    spark.sql("use tpchq_parquet_1tb")
 
     println("############################Query1###############################")
     time(spark.sql(" select  l_returnflag,  l_linestatus,  sum(l_quantity) as " +
