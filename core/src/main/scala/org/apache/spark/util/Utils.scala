@@ -269,6 +269,23 @@ private[spark] object Utils extends Logging {
     file.setExecutable(true, true)
   }
 
+  def moveToTrashIfEnabled(
+      fs: FileSystem,
+      partitionPath: Path,
+      trashInterval: Int,
+      hadoopConf: Configuration): Unit = {
+    if (trashInterval < 0) {
+      if (!fs.delete(partitionPath, true)) {
+        throw new RuntimeException(
+          "Cannot remove partition directory '" + partitionPath.toString)
+      } else {
+        logDebug(s"will move data ${partitionPath.toString} to trash")
+        hadoopConf.setInt("fs.trash.interval", trashInterval)
+        Trash.moveToAppropriateTrash(fs, partitionPath, hadoopConf)
+      }
+    }
+  }
+
   /**
    * Create a directory inside the given parent directory. The directory is guaranteed to be
    * newly created, and is not marked for automatic deletion.

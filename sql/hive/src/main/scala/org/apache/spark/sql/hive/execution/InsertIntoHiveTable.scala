@@ -33,6 +33,7 @@ import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.command.CommandUtils
 import org.apache.spark.sql.hive.HiveShim.{ShimFileSinkDesc => FileSinkDesc}
 import org.apache.spark.sql.hive.client.HiveClientImpl
+import org.apache.spark.util.Utils
 
 
 /**
@@ -239,10 +240,8 @@ case class InsertIntoHiveTable(
               val partitionPath = new Path(uri)
               val fs = partitionPath.getFileSystem(hadoopConf)
               if (fs.exists(partitionPath)) {
-                if (!fs.delete(partitionPath, true)) {
-                  throw new RuntimeException(
-                    "Cannot remove partition directory '" + partitionPath.toString)
-                }
+                val trashInterval = sparkSession.sessionState.conf.insertOverwriteTrashInterval
+                Utils.moveToTrashIfEnabled(fs, existFile.getPath, trashInterval, hadoopConf)
                 // Don't let Hive do overwrite operation since it is slower.
                 doHiveOverwrite = false
               }

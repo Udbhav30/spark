@@ -1903,6 +1903,13 @@ object SQLConf {
       .doc("When true, the ArrayExists will follow the three-valued boolean logic.")
       .booleanConf
       .createWithDefault(true)
+
+  val INSERT_OVERWRITE_TRASH_INTERVAL =
+    buildConf("spark.insertOverwrite.trash.interval")
+      .doc("This Configuration will decide whether move files to trash on insert overwrite" +
+        "If -1 files will be deleted without moving to trash")
+      .intConf
+      .createWithDefault(-1)
 }
 
 /**
@@ -2388,6 +2395,8 @@ class SQLConf extends Serializable with Logging {
   def castDatetimeToString: Boolean = getConf(SQLConf.LEGACY_CAST_DATETIME_TO_STRING)
 
   def defaultV2Catalog: Option[String] = getConf(DEFAULT_V2_CATALOG)
+
+  def insertOverwriteTrashInterval: Int = getConf(SQLConf.INSERT_OVERWRITE_TRASH_INTERVAL)
 
   /** ********************** SQLConf functionality methods ************ */
 
